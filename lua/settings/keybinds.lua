@@ -154,6 +154,15 @@ vim.keymap.set("n", "<leader>f", function()
     })
 end, { desc = "Format buffer (efm)" })
 
+-- Format using any LSP EXCEPT EFM (e.g. clangd / pyright)
+vim.keymap.set("n", "<leader>fl", function()
+    vim.lsp.buf.format({
+        filter = function(client)
+            return client.name ~= "efm"
+        end,
+    })
+end, { desc = "Format without EFM" })
+
 -- ============================================================
 -- FILE EXPLORER (NVIM-TREE)
 -- Toggle the file tree.
@@ -269,5 +278,5 @@ end, { desc = "Copy filename:line", silent = true })
 
 -- Copy and paste to system clipboard
 vim.keymap.set({ "n", "v" }, "<leader>y", '"+y')
-vim.keymap.set("n", "<leader>p", '"+p')
-vim.keymap.set("n", "<leader>P", '"+P')
+vim.keymap.set({ "n", "v" }, "<leader>p", '"+p')
+vim.keymap.set({ "n", "v" }, "<leader>P", '"+P')
