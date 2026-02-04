@@ -267,8 +267,7 @@ vim.keymap.set("n", "<leader>cfl", function()
     vim.notify("Copied: " .. text)
 end, { desc = "Copy filename:line", silent = true })
 
--- Open your custom keymap viewer
-vim.keymap.set("n", "<leader>?", function()
-    require("modules.keymap-viewer").open()
-end, { desc = "Open dynamic keymap viewer" })
-
+-- Copy and paste to system clipboard
+vim.keymap.set({ "n", "v" }, "<leader>y", '"+y')
+vim.keymap.set("n", "<leader>p", '"+p')
+vim.keymap.set("n", "<leader>P", '"+P')

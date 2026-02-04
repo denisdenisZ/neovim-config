@@ -82,15 +82,6 @@ vim.o.cursorline = true
 vim.o.breakindent = true
 
 -- ============================================================
--- CLIPBOARD INTEGRATION
--- ============================================================
-
--- Sync Neovim clipboard with OS clipboard after startup
-vim.schedule(function()
-    vim.o.clipboard = "unnamedplus"
-end)
-
--- ============================================================
 -- UNDO / HISTORY
 -- ============================================================
 
