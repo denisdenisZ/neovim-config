@@ -4,8 +4,9 @@
 -- ============================================================
 
 return {
-    'nvim-mini/mini.nvim', version = false,
+    "nvim-mini/mini.nvim",
+    version = false,
     config = function()
-        require('mini.trailspace').setup()
+        require("mini.trailspace").setup()
     end,
 }

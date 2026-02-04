@@ -4,9 +4,9 @@
 -- ============================================================
 
 return {
-	'https://github.com/akinsho/bufferline.nvim',
-	version = "*",
-	dependencies = 'nvim-tree/nvim-web-devicons',
+    "https://github.com/akinsho/bufferline.nvim",
+    version = "*",
+    dependencies = "nvim-tree/nvim-web-devicons",
 
     opts = {},
 }
