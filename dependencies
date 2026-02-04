@@ -1,0 +1,19 @@
+git
+ripgrep (rg)
+nodejs
+npm
+
+clangd
+pyright-langserver (via `npm install -g pyright`)
+efm-langserver
+
+stylua
+clang-tidy
+cppcheck
+
+C compiler (gcc or clang)
+make / ninja / cmake
+
+fd (fd-find)
+bat
+
