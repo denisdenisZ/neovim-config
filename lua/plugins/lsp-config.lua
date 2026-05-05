@@ -6,13 +6,6 @@ return {
 
         vim.lsp.config("pyright", {})
 
-        vim.lsp.config("neocmake", {
-            cmd = { "neocmakelsp", "stdio" },
-            filetypes = { "cmake" },
-            root_markers = { "CMakeLists.txt", ".git" },
-            single_file_support = true,
-        })
-
         -- EFM = LSP wrapper for formatters/linters
         -- Requires: efm-langserver
         vim.lsp.config("efm", {
@@ -68,6 +61,7 @@ return {
         })
 
         -- Enable (auto-start) servers
-        -- vim.lsp.enable({ "clangd", "pyright", "efm" })
+        vim.lsp.enable({ "clangd", "pyright", "efm" })
     end,
 }
+
