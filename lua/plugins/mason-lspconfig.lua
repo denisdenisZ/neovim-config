@@ -45,6 +45,7 @@ return {
 
                 -- bash
                 "shfmt",
+                "shellcheck",
 
                 -- lua
                 "stylua",

@@ -326,6 +326,125 @@ for i = 1, 4 do
 end
 
 -- ============================================================
+-- DAP (DEBUGGING: C/C++ via lldb-dap, Python via debugpy, Go via delve)
+-- F-keys match the common VSCode/Visual Studio convention.
+-- ============================================================
+vim.keymap.set("n", "<F5>", function()
+    require("dap").continue()
+end, { desc = "DAP: Continue/Start" })
+
+vim.keymap.set("n", "<F9>", function()
+    require("dap").toggle_breakpoint()
+end, { desc = "DAP: Toggle breakpoint" })
+
+vim.keymap.set("n", "<F10>", function()
+    require("dap").step_over()
+end, { desc = "DAP: Step over" })
+
+vim.keymap.set("n", "<F11>", function()
+    require("dap").step_into()
+end, { desc = "DAP: Step into" })
+
+vim.keymap.set("n", "<S-F11>", function()
+    require("dap").step_out()
+end, { desc = "DAP: Step out" })
+
+vim.keymap.set("n", "<leader>db", function()
+    require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
+end, { desc = "DAP: Conditional breakpoint" })
+
+vim.keymap.set("n", "<leader>dr", function()
+    require("dap").repl.toggle()
+end, { desc = "DAP: Toggle REPL" })
+
+vim.keymap.set("n", "<leader>dt", function()
+    require("dap").terminate()
+end, { desc = "DAP: Terminate session" })
+
+vim.keymap.set("n", "<leader>du", function()
+    require("dapui").toggle()
+end, { desc = "DAP: Toggle UI" })
+
+-- ============================================================
+-- NEOTEST (RUN/DEBUG INDIVIDUAL TESTS: Go, Python)
+-- ============================================================
+vim.keymap.set("n", "<leader>tt", function()
+    require("neotest").run.run()
+end, { desc = "Neotest: Run nearest test" })
+
+vim.keymap.set("n", "<leader>tf", function()
+    require("neotest").run.run(vim.fn.expand("%"))
+end, { desc = "Neotest: Run file" })
+
+vim.keymap.set("n", "<leader>td", function()
+    require("neotest").run.run({ strategy = "dap" })
+end, { desc = "Neotest: Debug nearest test" })
+
+vim.keymap.set("n", "<leader>to", function()
+    require("neotest").output.open({ enter = true })
+end, { desc = "Neotest: Output (nearest)" })
+
+vim.keymap.set("n", "<leader>ts", function()
+    require("neotest").summary.toggle()
+end, { desc = "Neotest: Toggle summary panel" })
+
+vim.keymap.set("n", "<leader>tS", function()
+    require("neotest").run.stop()
+end, { desc = "Neotest: Stop nearest" })
+
+-- ============================================================
+-- OVERSEER (GENERIC TASK RUNNER: non-CMake build/test/run tasks)
+-- ============================================================
+vim.keymap.set("n", "<leader>or", "<cmd>OverseerRun<CR>", { desc = "Overseer: Run task" })
+vim.keymap.set("n", "<leader>ot", "<cmd>OverseerToggle<CR>", { desc = "Overseer: Toggle task list" })
+vim.keymap.set(
+    "n",
+    "<leader>oq",
+    "<cmd>OverseerQuickAction<CR>",
+    { desc = "Overseer: Quick action" }
+)
+
+-- ============================================================
+-- CMAKE-TOOLS (CMAKE CONFIGURE/BUILD/RUN/DEBUG)
+-- Debug launches reuse the lldb-dap adapter defined in dap.lua.
+-- ============================================================
+vim.keymap.set("n", "<leader>kc", "<cmd>CMakeGenerate<CR>", { desc = "CMake: Configure" })
+vim.keymap.set("n", "<leader>kb", "<cmd>CMakeBuild<CR>", { desc = "CMake: Build" })
+vim.keymap.set("n", "<leader>kr", "<cmd>CMakeRun<CR>", { desc = "CMake: Run" })
+vim.keymap.set("n", "<leader>kd", "<cmd>CMakeDebug<CR>", { desc = "CMake: Debug (DAP)" })
+vim.keymap.set(
+    "n",
+    "<leader>kt",
+    "<cmd>CMakeSelectBuildTarget<CR>",
+    { desc = "CMake: Select build target" }
+)
+vim.keymap.set(
+    "n",
+    "<leader>kl",
+    "<cmd>CMakeSelectLaunchTarget<CR>",
+    { desc = "CMake: Select launch target" }
+)
+vim.keymap.set("n", "<leader>ko", "<cmd>CMakeOpen<CR>", { desc = "CMake: Open console" })
+
+-- ============================================================
+-- MARKDOWN RENDERING
+-- <leader>mr: in-editor text-based rendering (render-markdown.nvim)
+-- <leader>mp: full browser live preview (markdown-preview.nvim)
+-- ============================================================
+vim.keymap.set(
+    "n",
+    "<leader>mr",
+    "<cmd>RenderMarkdown toggle<CR>",
+    { desc = "Markdown: Toggle in-editor rendering" }
+)
+vim.keymap.set(
+    "n",
+    "<leader>mp",
+    "<cmd>MarkdownPreviewToggle<CR>",
+    { desc = "Markdown: Toggle browser preview" }
+)
+
+-- ============================================================
 -- BOOKMARKS (TELESCOPE EXTENSION)
 -- Shows bookmark list.
 -- ============================================================

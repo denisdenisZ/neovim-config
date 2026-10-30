@@ -16,7 +16,7 @@ return {
         -- EFM = LSP wrapper for formatters/linters
         -- Requires: efm-langserver
         vim.lsp.config("efm", {
-            filetypes = { "lua", "c", "cpp" }, -- add more
+            filetypes = { "lua", "c", "cpp", "sh", "bash" }, -- add more
 
             init_options = {
                 documentFormatting = true,
@@ -63,12 +63,44 @@ return {
                             },
                         },
                     },
+
+                    -- Bash formatting/linting via shfmt/shellcheck
+                    sh = {
+                        {
+                            formatCommand = "shfmt -i 4 -ci",
+                            formatStdin = true,
+                        },
+                        {
+                            lintCommand = "shellcheck -f gcc -x -",
+                            lintStdin = true,
+                            lintFormats = {
+                                "%f:%l:%c: %trror: %m",
+                                "%f:%l:%c: %tarning: %m",
+                                "%f:%l:%c: %tote: %m",
+                            },
+                        },
+                    },
+                    bash = {
+                        {
+                            formatCommand = "shfmt -i 4 -ci",
+                            formatStdin = true,
+                        },
+                        {
+                            lintCommand = "shellcheck -f gcc -x -",
+                            lintStdin = true,
+                            lintFormats = {
+                                "%f:%l:%c: %trror: %m",
+                                "%f:%l:%c: %tarning: %m",
+                                "%f:%l:%c: %tote: %m",
+                            },
+                        },
+                    },
                 },
             },
         })
 
         -- Enable (auto-start) servers
-        vim.lsp.enable({ "clangd", "pylsp", "efm", "neocmake" })
+        vim.lsp.enable({ "clangd", "pylsp", "efm", "neocmake", "bashls" })
     end,
 }
 
