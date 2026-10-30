@@ -1,6 +1,6 @@
 return {
     "tzachar/local-highlight.nvim",
-    event = { "BufReadPost", "BufNewFile" },
+    event = "VeryLazy",
     config = function()
         require("local-highlight").setup()
     end,

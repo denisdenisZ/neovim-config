@@ -1,6 +1,6 @@
 return {
     "neovim/nvim-lspconfig",
-    event = { "BufReadPost", "BufNewFile" },
+    event = "VeryLazy",
     config = function()
         -- Register/override server configs (Neovim 0.11+)
         vim.lsp.config("clangd", {})

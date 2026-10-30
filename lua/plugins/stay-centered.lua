@@ -1,6 +1,6 @@
 return {
     "https://github.com/arnamak/stay-centered.nvim",
-    event = { "BufReadPost", "BufNewFile" },
+    event = "VeryLazy",
     opts = {
         -- The filetype is determined by the vim filetype, not the file extension. In order to get the filetype, open a file and run the command:
         -- :lua print(vim.bo.filetype)

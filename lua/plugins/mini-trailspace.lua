@@ -6,7 +6,7 @@
 return {
     "nvim-mini/mini.nvim",
     version = false,
-    event = { "BufReadPost", "BufNewFile" },
+    event = "VeryLazy",
     config = function()
         require("mini.trailspace").setup()
     end,
