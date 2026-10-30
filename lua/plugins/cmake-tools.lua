@@ -27,6 +27,11 @@ return {
                 type = "lldb-dap",
                 request = "launch",
             },
+            -- Ninja is already installed on this machine and builds
+            -- noticeably faster than the default "Unix Makefiles"
+            -- generator, especially on incremental rebuilds of a large
+            -- project -- directly tightens the build/test loop.
+            cmake_generate_options = { "-G", "Ninja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=1" },
         },
     },
 }
