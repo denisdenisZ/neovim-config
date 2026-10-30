@@ -54,13 +54,39 @@ That gives clangd a real `compile_commands.json` for the whole project.
 7. **Trouble + diagnostics.** Deliberately break something trivial (add
    a typo to a local scratch copy, not the real file) and confirm
    `<leader>xx` surfaces it.
+8. **Flash across a file.** In `code/Common/Importer.cpp`, press `s`
+   and type the 2-character label for any visible occurrence of
+   `ReadFile` -- confirm you land on it instantly instead of scrolling
+   or searching.
+9. **Textobjects on a real class.** In `include/assimp/BaseImporter.h`,
+   put the cursor anywhere inside the `BaseImporter` class body and
+   try `vac` (select the whole class) and `]m`/`[m` to hop between
+   method declarations.
+10. **Grug-far a rename.** Pick a locally-scoped symbol (not something
+    exported across the whole library) and try `<leader>sr` to preview
+    a project-wide rename before committing to it. Don't actually save
+    the changes unless you mean to -- this is a real codebase.
+11. **Gitsigns.** Make a trivial one-line edit to a throwaway copy of a
+    tracked file, confirm `]h` jumps to the hunk and `<leader>hp`
+    previews it inline.
+12. **Frecency.** After you've opened a handful of files above, press
+    `<leader>fr` and confirm the ones you just touched rank near the
+    top.
 
 ## Go exercise (throwaway, anywhere e.g. `/tmp`)
 
+`gopls` had never actually been enabled before this session (see
+`NVIM_FEATURES.md` #13) -- worth specifically confirming you now get
+real completions/diagnostics on `.go` files, not just test running.
+
 Write a tiny package with one function and one table-driven test.
+- Confirm gopls completion/hover works at all (type `fmt.` and check
+  you get real completions).
 - `<leader>tt` on the test function, confirm pass/fail shows inline.
 - `<leader>td` to debug it via delve -- set a breakpoint inside the
   function under test first.
+- Try `<leader>na`/`<leader>nb` on a multi-parameter function call to
+  swap argument order.
 
 ## Python exercise
 
@@ -68,6 +94,10 @@ Same shape: a function + a `pytest` test.
 - `<leader>tt` / `<leader>ts` (summary panel) for the test.
 - `<F9>` + `<F5>` to debug the script directly (not through pytest) and
   confirm you can inspect a variable mid-function in the DAP UI.
+- Write a file with an unused import and bad spacing, press `<leader>f`
+  -- confirm `ruff` (swapped in for black+isort, see
+  `NVIM_FEATURES.md` #17) both reformats it and flags the unused import
+  as a diagnostic, without a duplicate message from pylsp.
 
 ## Bash exercise
 
@@ -91,3 +121,7 @@ piped into `grep`, etc.) and confirm:
 Tell me what you pressed and what you expected vs. what happened --
 specifics (file, cursor position, exact keys) let me reproduce it in a
 real PTY test rather than guessing.
+
+See also `PRACTICES.md` for the beyond-the-editor side: build-loop
+speedups (ccache/mold/sanitizers), git hooks, and a few architecture
+habits aimed specifically at the inheritance-heavy C++ pain point.

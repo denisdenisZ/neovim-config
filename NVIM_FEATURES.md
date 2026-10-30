@@ -203,3 +203,158 @@ cost anything at startup for an unrelated file.
 - `bear`/`compiledb` not installed -- only matters if you have a
   Makefile-based (non-CMake) C/C++ project that needs a
   `compile_commands.json`.
+
+---
+
+# Session 2: a real bug hunt + "fly around files"
+
+Everything below was added in a second pass specifically aimed at your
+ask to stress-test for bugs, overlapping plugin behavior, and go further
+on navigation/architecture. Two real, pre-existing bugs were found and
+fixed (not things I introduced) -- see 13 and 18.
+
+## 13. Fixed: gopls/lua_ls/ts_ls/html/cssls were installed but dead
+
+`mason-lspconfig`'s `ensure_installed` had `gopls`, `lua_ls`, `ts_ls`,
+`html`, `cssls` in it, but `vim.lsp.enable()` never included them --
+**Go had zero LSP support this entire time**, and so did Lua (meaning
+every time you've edited this very nvim config, you've had no
+completions/diagnostics/go-to-def for it either). Fixed by adding all
+five to the enable list. **Verified for real**: opened a `.go` file,
+`gopls` attached; opened a `.lua` file, `lua_ls` attached.
+
+Also added `lazydev.nvim` so `lua_ls` gives you proper `vim.*`
+completions (pulled from installed plugins' own type annotations)
+instead of generic-Lua-only completions while editing this config.
+
+`<leader>f`/`<leader>fl` (format) previously did nothing on `.py`/`.go`
+files too, despite the formatters being installed -- wired
+black+isort (later swapped to `ruff`, see 17) and `gofumpt` into efm.
+
+## 14. Fly-around-files tooling -- new
+
+- **flash.nvim** (bare `s`/`S`): press `s`, type 2 characters near
+  where you want to go, land there instantly -- works for any visible
+  text, in any window, including across splits. `S` does the same but
+  jumps to treesitter nodes (functions, classes, etc.) instead of raw
+  text matches. This takes over vim's native single-char-substitute
+  `s` -- a deliberate, well-established trade (use `cl` instead, which
+  does the same thing).
+- **gitsigns.nvim**: `]h`/`[h` next/previous hunk, `<leader>hs`/`hr`
+  stage/reset a hunk, `<leader>hp` preview a hunk inline, `<leader>hb`
+  blame the current line, `<leader>hd` diff the whole file. This is the
+  inline, line-level git workflow diffview never covered (diffview is
+  still there for full side-by-side diffs). **Verified for real**:
+  attached to an actual git repo, detected actual uncommitted hunks.
+- **grug-far.nvim** (`<leader>sr`, or visual-select then `<leader>sr`):
+  project-wide search *and replace* with a live preview before you
+  commit to it -- `live_grep` could only ever search, never replace.
+  Directly useful for renaming something across many override sites in
+  an inheritance-heavy codebase.
+- **telescope-frecency** (`<leader>fr`): a file picker ranked by
+  frequency + recency together, not just one or the other -- the
+  actual answer to "fly around files" across sessions, beyond plain
+  MRU. Needs `sqlite3` (already on this machine, no install needed).
+- **telescope-live-grep-args** (`<leader>fa`): grep with ripgrep flags
+  typed inline, e.g. restrict to `-g *.cpp`, add `-i` for
+  case-insensitive -- addresses "ripgrep is weak" by letting you
+  actually scope a search precisely instead of only ever doing a plain
+  string/regex match.
+- **persistence.nvim** (`<leader>Ss` restore session for this
+  directory, `<leader>Sl` restore the last session anywhere,
+  `<leader>Sd` don't save this session on exit): remembers your
+  window/buffer layout per project directory, so hopping between e.g.
+  the assimp practice repo and a quick Go/Python scratch dir doesn't
+  mean losing your open files each time. **Verified for real**: a
+  2-window layout round-tripped through an actual save+restore across
+  two separate nvim processes.
+- **nvim-autopairs**: auto-closes `(`/`{`/`[`/`"`/`'` as you type --
+  was entirely missing before. **Verified for real**: typing `foo(`
+  produces `foo()` with the cursor between the parens.
+- **mini.surround** (`gza`/`gzd`/`gzr` add/delete/replace a surrounding
+  pair, e.g. `gzd"` deletes surrounding quotes): moved to a `gz*`
+  prefix instead of the usual `sa`/`sd`/`sr` specifically because
+  flash.nvim already claims bare `s` -- this is the standard way the
+  community resolves that exact conflict (LazyVim does the same).
+- **nvim-treesitter-textobjects**: `af`/`if` (a/inner function),
+  `ac`/`ic` (a/inner class), `aa`/`ia` (a/inner parameter) as operators
+  -- e.g. `daf` deletes a whole function, `vac` selects a whole class.
+  `]m`/`[m` jump to next/previous function start, `]]`/`[[` for class
+  start (these override vim's native `]]`/`[[` section-jump, another
+  deliberate trade -- section-jump is rarely used and class-jump is far
+  more valuable in C++). `<leader>na`/`<leader>nb` swap the parameter
+  under the cursor with the next/previous one. **Verified for real**
+  via feedkeys-based tests: `vaf` selected exactly a function's line
+  span, `]m` landed exactly on a function start, swapping two
+  parameters actually reordered them in the buffer.
+
+## 15. Fixed: telescope was loading on every single startup
+
+`keybinds.lua` had `local builtin = require("telescope.builtin")` at
+the top of the file (loaded unconditionally at startup), which forced
+telescope to load eagerly every time regardless of its
+`cmd = "Telescope"` lazy trigger -- a caveat flagged back in the first
+pass and left alone at the time, fixed now that it was back under the
+microscope. Every Telescope-calling keymap now wraps the `require` in
+a closure so it only loads the first time you actually use a picker.
+**Verified**: `package.loaded['telescope.builtin']` is `nil` at a plain
+startup now, whereas before it was always loaded.
+
+## 16. Fixed: nvim-treesitter-textobjects config was a silent no-op
+
+The first pass configured `nvim-treesitter-textobjects` the
+old/deprecated way -- a `textobjects = { select = {...}, move = {...} }`
+block nested inside `nvim-treesitter.configs.setup()`. This plugin was
+rewritten with its own standalone `setup()` and requires explicit
+`vim.keymap.set()` calls; the old nested style is silently ignored on
+the installed version. Pressing `vaf` did nothing. Rewritten correctly
+(see 14) and re-verified.
+
+## 17. Swapped python formatting/linting to ruff; deduped diagnostics
+
+`black`+`isort` replaced with `ruff format`/`ruff check` -- one
+rust-speed tool instead of two, same formatting philosophy (`ruff
+format` is black-compatible so this won't reformat your existing code
+differently). Along the way, found that `pylsp`'s own built-in
+`pyflakes`/`pycodestyle`/`mccabe`/`pylint` plugins were producing
+near-duplicate diagnostics for the same issues ruff already reports
+(e.g. two separate "`os` imported but unused" messages for one unused
+import) -- disabled those specific pylsp plugins so ruff is the sole
+linter. Deliberately left pylsp's own *formatting* plugins untouched:
+disabling those too made `<leader>f` silently do nothing for python
+(root cause not fully nailed down -- not worth carrying a
+poorly-understood breakage just to tidy up dead config).
+
+## 18. CMake now uses Ninja + auto-exports compile_commands.json
+
+`ninja` was already installed on this machine and builds noticeably
+faster than the default "Unix Makefiles" generator, especially on
+incremental rebuilds of something the size of assimp. `<leader>kc`
+(`CMakeGenerate`) now passes `-G Ninja -DCMAKE_EXPORT_COMPILE_COMMANDS=1`
+automatically, so you get a fresh `compile_commands.json` for clangd
+without remembering to pass that flag by hand. **Verified for real**:
+`build.ninja`/`rules.ninja` and `compile_commands.json` all present
+after a real `CMakeGenerate` run.
+
+## 19. Dropped the "latex" treesitter parser
+
+It was in `ensure_installed` but fails to compile every time --
+tree-sitter-latex's build script passes a `--no-bindings` flag the
+installed `tree-sitter` CLI (0.26.9) no longer accepts. vimtex doesn't
+need this parser for its own syntax highlighting, compilation, or
+SyncTex search, so nothing is lost by skipping it; just stops the
+repeated failed-install noise on `:Lazy sync`.
+
+## 20. New session testing discipline
+
+Every item above marked "verified for real" was checked with an actual
+spawned nvim process (not `--headless`, which never fires a real
+`UIEnter` and is an unreliable proxy for anything UI/FileType-gated),
+driving real keystrokes and reading the plugin's own internal state
+(`require("dap").session()`, `nvim_buf_get_extmarks`, etc.) rather than
+trusting that a config "should" work from reading its docs. This caught
+three real, otherwise-invisible bugs (13, 16, 17) that a
+docs-reading-only pass would have missed entirely.
+
+See `PRACTICES.md` for suggestions beyond the editor itself -- the
+build/test loop, sanitizers, git hooks, and so on.
