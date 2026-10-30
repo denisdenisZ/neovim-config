@@ -18,7 +18,6 @@ return {
                 "html",
                 "cssls",
                 "lua_ls",
-                "cmake",
                 "efm",
             },
             automatic_installation = true,
@@ -33,6 +32,9 @@ return {
 
                 -- c/cpp
                 "clang-format",
+
+                -- cmake (raw mason package name; lspconfig server name is "neocmake")
+                "neocmakelsp",
 
                 -- python
                 "black",

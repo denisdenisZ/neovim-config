@@ -1,5 +1,5 @@
 return {
     "mason-org/mason.nvim",
-    cmd = "Mason",
+    cmd = { "Mason", "MasonInstall", "MasonUninstall", "MasonUpdate", "MasonLog" },
     opts = {}
 }

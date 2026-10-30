@@ -1,0 +1,7 @@
+{
+    "typedef struct": {
+        "prefix": "struct",
+        "body": ["struct {", "\t$2", "} ${1:Name};"],
+        "description": "Completes 'typedef struct' into the full typedef-struct boilerplate, cursor starts on the type name"
+    }
+}

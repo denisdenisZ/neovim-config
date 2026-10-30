@@ -264,6 +264,68 @@ vim.keymap.set(
 vim.keymap.set("n", "<Leader>l", require("lsp_lines").toggle, { desc = "Toggle lsp_lines" })
 
 -- ============================================================
+-- LSP: SWITCH BETWEEN SOURCE/HEADER (clangd extension)
+-- ============================================================
+vim.keymap.set(
+    "n",
+    "<leader>gh",
+    "<cmd>LspClangdSwitchSourceHeader<CR>",
+    { desc = "[G]o to [H]eader/source (clangd)" }
+)
+
+-- ============================================================
+-- TROUBLE (AGGREGATED DIAGNOSTICS/SYMBOLS/LSP LIST)
+-- A non-linear view: see many symbols/refs/diagnostics at once
+-- instead of jumping one-at-a-time through the jumplist.
+-- ============================================================
+vim.keymap.set(
+    "n",
+    "<leader>xx",
+    "<cmd>Trouble diagnostics toggle<CR>",
+    { desc = "Trouble: Diagnostics (workspace)" }
+)
+vim.keymap.set(
+    "n",
+    "<leader>xX",
+    "<cmd>Trouble diagnostics toggle filter.buf=0<CR>",
+    { desc = "Trouble: Diagnostics (buffer)" }
+)
+vim.keymap.set(
+    "n",
+    "<leader>cs",
+    "<cmd>Trouble symbols toggle focus=false<CR>",
+    { desc = "Trouble: Symbols outline" }
+)
+vim.keymap.set(
+    "n",
+    "<leader>cl",
+    "<cmd>Trouble lsp toggle focus=false win.position=right<CR>",
+    { desc = "Trouble: LSP refs/defs/implementations" }
+)
+vim.keymap.set("n", "<leader>xL", "<cmd>Trouble loclist toggle<CR>", { desc = "Trouble: Location list" })
+vim.keymap.set("n", "<leader>xQ", "<cmd>Trouble qflist toggle<CR>", { desc = "Trouble: Quickfix list" })
+
+-- ============================================================
+-- HARPOON (QUICK-PINNED FILE JUMPS)
+-- Manually mark a handful of files/locations and jump straight
+-- to them, instead of walking the jumplist one hop at a time.
+-- ============================================================
+vim.keymap.set("n", "<leader>a", function()
+    require("harpoon"):list():add()
+end, { desc = "Harpoon: Add file" })
+
+vim.keymap.set("n", "<leader>e", function()
+    local harpoon = require("harpoon")
+    harpoon.ui:toggle_quick_menu(harpoon:list())
+end, { desc = "Harpoon: Toggle quick menu" })
+
+for i = 1, 4 do
+    vim.keymap.set("n", "<leader>" .. i, function()
+        require("harpoon"):list():select(i)
+    end, { desc = "Harpoon: Jump to " .. i })
+end
+
+-- ============================================================
 -- BOOKMARKS (TELESCOPE EXTENSION)
 -- Shows bookmark list.
 -- ============================================================
