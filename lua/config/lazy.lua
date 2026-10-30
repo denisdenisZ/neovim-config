@@ -36,6 +36,20 @@ require("lazy").setup({
     },
     -- Plugins load on-demand (event/cmd/ft/keys) unless a spec sets lazy = false.
     defaults = { lazy = true },
+    performance = {
+        rtp = {
+            disabled_plugins = {
+                "gzip",
+                "matchit",
+                "matchparen",
+                "netrwPlugin",
+                "tarPlugin",
+                "tohtml",
+                "tutor",
+                "zipPlugin",
+            },
+        },
+    },
     -- Configure any other settings here. See the documentation for more details.
     -- colorscheme that will be used when installing plugins.
     install = {}, --colorscheme = { "habamax" } },
