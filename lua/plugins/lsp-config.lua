@@ -5,7 +5,28 @@ return {
         -- Register/override server configs (Neovim 0.11+)
         vim.lsp.config("clangd", {})
 
-        vim.lsp.config("pylsp", {})
+        -- Disable pylsp's own diagnostic plugins -- ruff (via efm,
+        -- below) covers the same ground and was producing duplicate
+        -- diagnostics for the same issue (e.g. "'os' imported but
+        -- unused" from pyflakes AND from ruff simultaneously, confirmed
+        -- via a real test). Deliberately NOT touching pylsp's
+        -- formatting plugins (rope/yapf/autopep8): disabling those too
+        -- made `vim.lsp.buf.format({filter = efm})` silently do
+        -- nothing for python specifically (confirmed by bisecting) --
+        -- root cause not fully nailed down, so leaving those alone
+        -- rather than carrying a latent, poorly-understood breakage.
+        vim.lsp.config("pylsp", {
+            settings = {
+                pylsp = {
+                    plugins = {
+                        pyflakes = { enabled = false },
+                        pycodestyle = { enabled = false },
+                        mccabe = { enabled = false },
+                        pylint = { enabled = false },
+                    },
+                },
+            },
+        })
 
         vim.lsp.config("gopls", {
             settings = {
@@ -113,15 +134,20 @@ return {
                         },
                     },
 
-                    -- Python formatting via isort (import order) then black
+                    -- Python formatting/linting via ruff (replaces
+                    -- black+isort: same formatting philosophy, rust-
+                    -- speed, one tool instead of two+flake8).
                     python = {
                         {
-                            formatCommand = "isort -",
+                            formatCommand = "ruff format --stdin-filename ${INPUT} -",
                             formatStdin = true,
                         },
                         {
-                            formatCommand = "black -q -",
-                            formatStdin = true,
+                            lintCommand = "ruff check --stdin-filename ${INPUT} --output-format concise -",
+                            lintStdin = true,
+                            lintFormats = {
+                                "%f:%l:%c: %m",
+                            },
                         },
                     },
 

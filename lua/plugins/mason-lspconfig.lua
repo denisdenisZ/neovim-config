@@ -36,9 +36,9 @@ return {
                 -- cmake (raw mason package name; lspconfig server name is "neocmake")
                 "neocmakelsp",
 
-                -- python
-                "black",
-                "isort",
+                -- python (ruff replaces black+isort -- rust-speed,
+                -- one tool for format+lint instead of two)
+                "ruff",
 
                 -- js
                 "prettier",
