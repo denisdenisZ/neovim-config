@@ -1,5 +1,6 @@
 return {
     "nvim-tree/nvim-tree.lua",
+    cmd = { "NvimTreeToggle", "NvimTreeOpen", "NvimTreeFocus" },
 
     opts = {
         -- Keep the tree focused on the file in the current buffer

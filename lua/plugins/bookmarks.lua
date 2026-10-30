@@ -5,6 +5,7 @@
 
 return {
     "tomasky/bookmarks.nvim",
+    event = "VeryLazy",
     config = function()
         require("bookmarks").setup({
             save_file = vim.fn.expand("$HOME/.bookmarks"),

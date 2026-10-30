@@ -1,10 +1,11 @@
 return {
     "neovim/nvim-lspconfig",
+    event = { "BufReadPost", "BufNewFile" },
     config = function()
         -- Register/override server configs (Neovim 0.11+)
         vim.lsp.config("clangd", {})
 
-        vim.lsp.config("pyright", {})
+        vim.lsp.config("pylsp", {})
 
         -- EFM = LSP wrapper for formatters/linters
         -- Requires: efm-langserver
@@ -61,7 +62,7 @@ return {
         })
 
         -- Enable (auto-start) servers
-        vim.lsp.enable({ "clangd", "pyright", "efm" })
+        vim.lsp.enable({ "clangd", "pylsp", "efm" })
     end,
 }
 

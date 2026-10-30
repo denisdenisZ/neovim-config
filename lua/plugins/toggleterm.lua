@@ -6,6 +6,7 @@
 return {
     "akinsho/toggleterm.nvim",
     version = "*",
+    keys = { { [[<c-\>]], desc = "Toggle terminal" } },
 
     opts = {
         -- Keymap used by ToggleTerm to open/close terminal

@@ -101,7 +101,7 @@ vim.o.smartcase = true
 -- ============================================================
 
 -- Faster CursorHold / diagnostic popups
-vim.o.updatetime = 250
+-- (final value is set in modules/float-diagnostics.lua, which loads after this file)
 
 -- Time to wait for mapped key sequences
 vim.o.timeoutlen = 1000
