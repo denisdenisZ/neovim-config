@@ -63,6 +63,25 @@ vim.keymap.set("n", "<C-f>", function()
     })
 end, { desc = "Telescope: Search word under cursor in current buffer" })
 
+-- Grep the current visual selection across the project
+local function get_visual_selection()
+    local save_reg = vim.fn.getreg("v")
+    local save_regtype = vim.fn.getregtype("v")
+    vim.cmd('noautocmd normal! "vy')
+    local sel = vim.fn.getreg("v")
+    vim.fn.setreg("v", save_reg, save_regtype)
+    -- collapse multi-line selections into a single search string
+    return sel:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
+end
+
+vim.keymap.set("v", "<S-f>", function()
+    local text = get_visual_selection()
+    builtin.live_grep({
+        default_text = text,
+        initial_mode = "normal",
+    })
+end, { desc = "Telescope: Live grep visual selection" })
+
 -- ============================================================
 -- TELESCOPE DIR (PLUGIN EXTENSION)
 -- Requires: Telescope "dir" extension (or equivalent command provider).
@@ -278,6 +297,22 @@ vim.keymap.set("n", "<leader>cfl", function()
     vim.fn.setreg("+", text)
     vim.notify("Copied: " .. text)
 end, { desc = "Copy filename:line", silent = true })
+
+-- Copy full path to system clipboard
+vim.keymap.set("n", "<leader>cp", function()
+    local p = vim.fn.expand("%:p")
+    vim.fn.setreg("+", p)
+    vim.notify("Copied: " .. p)
+end, { desc = "Copy full path", silent = true })
+
+-- Copy "full/path:line" to system clipboard
+vim.keymap.set("n", "<leader>cpl", function()
+    local fname = vim.fn.expand("%:p")
+    local line = vim.api.nvim_win_get_cursor(0)[1]
+    local text = string.format("%s:%d", fname, line)
+    vim.fn.setreg("+", text)
+    vim.notify("Copied: " .. text)
+end, { desc = "Copy full path:line", silent = true })
 
 -- Copy and paste to system clipboard
 vim.keymap.set({ "n", "v" }, "<leader>y", '"+y')
