@@ -17,7 +17,19 @@ return {
     {
         "folke/flash.nvim",
         event = "VeryLazy",
-        opts = {},
+        opts = {
+            modes = {
+                -- flash silently takes over f/F/t/T/;/, (no keymap needed --
+                -- it hooks Neovim's built-in ones). Its default lets these
+                -- jump to the nearest match ANYWHERE in the visible window,
+                -- not just the current line like vanilla Vim -- surprising
+                -- if you don't know it's there. Keep f/F/t/T scoped to the
+                -- current line, matching normal Vim muscle memory.
+                char = {
+                    multi_line = false,
+                },
+            },
+        },
         keys = {
             {
                 "s",
