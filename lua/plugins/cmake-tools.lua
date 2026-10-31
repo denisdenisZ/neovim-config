@@ -33,5 +33,14 @@ return {
             -- project -- directly tightens the build/test loop.
             cmake_generate_options = { "-G", "Ninja", "-DCMAKE_EXPORT_COMPILE_COMMANDS=1" },
         },
+        keys = {
+            { "<leader>kc", "<cmd>CMakeGenerate<CR>", desc = "CMake: Configure" },
+            { "<leader>kb", "<cmd>CMakeBuild<CR>", desc = "CMake: Build" },
+            { "<leader>kr", "<cmd>CMakeRun<CR>", desc = "CMake: Run" },
+            { "<leader>kd", "<cmd>CMakeDebug<CR>", desc = "CMake: Debug (DAP)" },
+            { "<leader>kt", "<cmd>CMakeSelectBuildTarget<CR>", desc = "CMake: Select build target" },
+            { "<leader>kl", "<cmd>CMakeSelectLaunchTarget<CR>", desc = "CMake: Select launch target" },
+            { "<leader>ko", "<cmd>CMakeOpen<CR>", desc = "CMake: Open console" },
+        },
     },
 }

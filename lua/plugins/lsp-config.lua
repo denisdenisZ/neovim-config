@@ -1,6 +1,112 @@
 return {
     "neovim/nvim-lspconfig",
     event = "VeryLazy",
+    keys = {
+        -- Jump to definitions/references/etc, using Telescope's UI.
+        {
+            "<leader>gr",
+            function()
+                require("telescope.builtin").lsp_references({ initial_mode = "normal" })
+            end,
+            desc = "[G]o to [R]eferences",
+        },
+        {
+            "<leader>gd",
+            function()
+                require("telescope.builtin").lsp_definitions()
+            end,
+            desc = "[G]o to [D]efinitions",
+        },
+        {
+            "<leader>gt",
+            function()
+                require("telescope.builtin").lsp_type_definitions()
+            end,
+            desc = "[G]o to [T]ype definitions",
+        },
+        {
+            "<leader>gi",
+            function()
+                require("telescope.builtin").lsp_implementations()
+            end,
+            desc = "[G]o to [I]mplementations",
+        },
+        {
+            "<leader>ic",
+            function()
+                require("telescope.builtin").lsp_incoming_calls()
+            end,
+            desc = "LSP: Show [I]ncoming [C]alls",
+        },
+        {
+            "<leader>oc",
+            function()
+                require("telescope.builtin").lsp_outgoing_calls()
+            end,
+            desc = "LSP: Show [O]utgoing [C]alls",
+        },
+        -- Symbols
+        {
+            "<leader>ls",
+            function()
+                require("telescope.builtin").lsp_document_symbols()
+            end,
+            desc = "[L]ist [S]ymbols in buffer",
+        },
+        {
+            "<leader>lsw",
+            function()
+                require("telescope.builtin").lsp_workspace_symbols()
+            end,
+            desc = "[L]ist [S]ymbols in [W]orkspace",
+        },
+        {
+            "<leader>lsww",
+            function()
+                require("telescope.builtin").lsp_dynamic_workspace_symbols()
+            end,
+            desc = "[L]ist [S]ymbols in [W]orkspace (dynamic)",
+        },
+        -- NOTE: calls workspace symbols, not diagnostics -- pre-existing
+        -- naming mismatch, kept as-is rather than "fixed" unprompted.
+        {
+            "<leader>ld",
+            function()
+                require("telescope.builtin").lsp_dynamic_workspace_symbols()
+            end,
+            desc = "[L]ist [D]iagnostics (check mapping)",
+        },
+        -- Hover (wording tweak: hover shows documentation, not "type")
+        { "<leader>st", vim.lsp.buf.hover, desc = "[S]how [T]ooltip (LSP hover)" },
+        { "<leader>R", vim.lsp.buf.rename, desc = "[LSP] Rename symbol" },
+        { "<CR>", vim.lsp.buf.code_action, desc = "[LSP] Code actions" },
+        -- Format code, force efm langserver instead of lsp
+        {
+            "<leader>f",
+            function()
+                vim.lsp.buf.format({
+                    filter = function(client)
+                        return client.name == "efm"
+                    end,
+                })
+            end,
+            desc = "Format buffer (efm)",
+        },
+        -- Format using any LSP EXCEPT EFM (e.g. clangd / pyright)
+        {
+            "<leader>fl",
+            function()
+                vim.lsp.buf.format({
+                    filter = function(client)
+                        return client.name ~= "efm"
+                    end,
+                })
+            end,
+            desc = "Format without EFM",
+        },
+        -- clangd extension: jump between a .c/.cpp file and its header.
+        { "<leader>gh", "<cmd>LspClangdSwitchSourceHeader<CR>", desc = "[G]o to [H]eader/source (clangd)" },
+    },
     config = function()
         -- Register/override server configs (Neovim 0.11+)
         vim.lsp.config("clangd", {})

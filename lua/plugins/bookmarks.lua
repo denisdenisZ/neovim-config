@@ -6,6 +6,12 @@
 return {
     "tomasky/bookmarks.nvim",
     event = "VeryLazy",
+    -- Not bare `mm`/`mi`/etc. (those are buffer-local, set in
+    -- on_attach below) -- this is the <leader>-prefixed Telescope
+    -- picker over the whole bookmark list.
+    keys = {
+        { "<leader>mm", "<cmd>Telescope bookmarks list<CR>", desc = "Bookmarks: List (Telescope)" },
+    },
     config = function()
         require("bookmarks").setup({
             save_file = vim.fn.expand("$HOME/.bookmarks"),

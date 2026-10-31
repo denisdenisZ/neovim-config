@@ -10,5 +10,16 @@ return {
         "MagicDuck/grug-far.nvim",
         cmd = "GrugFar",
         opts = {},
+        keys = {
+            { "<leader>sr", "<cmd>GrugFar<CR>", desc = "Grug-far: Search & replace" },
+            {
+                "<leader>sr",
+                mode = "v",
+                function()
+                    require("grug-far").with_visual_selection()
+                end,
+                desc = "Grug-far: Search & replace (visual selection)",
+            },
+        },
     },
 }

@@ -17,6 +17,75 @@ return {
             "leoluz/nvim-dap-go",
             "mfussenegger/nvim-dap-python",
         },
+        -- F-keys match the common VSCode/Visual Studio convention.
+        -- These stay global (not scoped to the `ft` list above) on
+        -- purpose, same as before the split: pressing e.g. F9 in any
+        -- buffer is what triggers DAP's first load.
+        keys = {
+            {
+                "<F5>",
+                function()
+                    require("dap").continue()
+                end,
+                desc = "DAP: Continue/Start",
+            },
+            {
+                "<F9>",
+                function()
+                    require("dap").toggle_breakpoint()
+                end,
+                desc = "DAP: Toggle breakpoint",
+            },
+            {
+                "<F10>",
+                function()
+                    require("dap").step_over()
+                end,
+                desc = "DAP: Step over",
+            },
+            {
+                "<F11>",
+                function()
+                    require("dap").step_into()
+                end,
+                desc = "DAP: Step into",
+            },
+            {
+                "<S-F11>",
+                function()
+                    require("dap").step_out()
+                end,
+                desc = "DAP: Step out",
+            },
+            {
+                "<leader>db",
+                function()
+                    require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
+                end,
+                desc = "DAP: Conditional breakpoint",
+            },
+            {
+                "<leader>dr",
+                function()
+                    require("dap").repl.toggle()
+                end,
+                desc = "DAP: Toggle REPL",
+            },
+            {
+                "<leader>dt",
+                function()
+                    require("dap").terminate()
+                end,
+                desc = "DAP: Terminate session",
+            },
+            {
+                "<leader>du",
+                function()
+                    require("dapui").toggle()
+                end,
+                desc = "DAP: Toggle UI",
+            },
+        },
         config = function()
             local dap = require("dap")
 

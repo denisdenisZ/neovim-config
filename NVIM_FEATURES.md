@@ -75,14 +75,14 @@ actively maintained and gives real completions in `CMakeLists.txt` files.
 For anything that isn't CMake: Go builds/tests, Python scripts, Bash
 scripts, Makefiles.
 
-- `<leader>or` run a task: picks from auto-detected project templates
-  (Makefile, Cargo.toml, package.json, ...) if any match the current
-  directory, otherwise prompts for an ad-hoc shell command instead.
-  **Fixed** (see section 22) -- plain `:OverseerRun` does the template
-  part but silently does nothing when zero templates match, no
-  fallback, no message; this keymap checks the template count itself
-  first and falls back to `vim.ui.input` for a raw command when there
-  aren't any.
+- `<leader>or` run a task from auto-detected project templates
+  (Makefile, Cargo.toml, package.json, ...). **Note** (see section
+  22): if nothing matches your current directory, this does and shows
+  *nothing at all* -- no error, no message, that's overseer's own
+  behavior, not a bug here.
+- `<leader>oa` run an ad-hoc shell command (prompts, not tied to any
+  detected project type) -- use this when `<leader>or` would have
+  nothing to pick from.
 - `<leader>ot` toggle the task list
 - `<leader>oq` quick actions on the task under cursor (rerun, open output...)
 
@@ -413,22 +413,40 @@ through nvim-tree (or `:edit`, or any other post-startup path) happens
 well after `VeryLazy`, so the query resolves with nvim-treesitter's
 buggy file included and crashes.
 
-**Real fix:** `lua/plugins/nvim-treesitter.lua`'s `config` function now
-explicitly `require`s `nvim-treesitter.query_predicates` (forcing its
-buggy directives to register) and immediately re-registers
-`#set-lang-from-info-string!` and `#set-lang-from-mimetype!` with
-corrected handlers via `vim.treesitter.query.add_directive(name,
-handler, { force = true })`. The corrected handlers are the plugin's
-original logic with one change: they unwrap `match[capture_id]` to its
-first element when it's a table, instead of assuming it's always
-already a single `TSNode`. This fixes the actual broken Lua functions
-rather than fighting over which query *file* gets used, so it's
-correct regardless of `&runtimepath` order or lazy-load timing.
-Verified via PTY by deliberately reproducing the late-open path (open
-nvim with no file argument, wait past `VeryLazy`, then `:edit` this
-file) and confirming `&runtimepath` resolution really does pick
-nvim-treesitter's own file in that scenario, yet there's no crash and
-the `sh`/`c` fences still get real injected `bash`/`c` parsers.
+**Second fix attempt (worked, but was a patch, superseded again):**
+force-re-registering `#set-lang-from-info-string!` and
+`#set-lang-from-mimetype!` with corrected handlers directly in Lua
+(unwrap `match[capture_id]` to its first element when it's a table).
+This genuinely fixed the crash regardless of `&runtimepath` order or
+lazy-load timing -- verified via PTY by deliberately reproducing the
+late-open path. But it was still a patch sitting on top of a plugin
+bug, copy-pasting the plugin's own internal logic into our config to
+correct it -- exactly the kind of fragile coupling that silently rots
+if nvim-treesitter's internals change again.
+
+**Real fix:** nvim-treesitter has two branches: `master` (the old
+`configs.setup()` API, what this config used) and `main` (a full
+rewrite). `main`'s own README says `master` is "locked" and only
+claims Nvim 0.11 compatibility -- we're on 0.12.4, past its supported
+window, which is *why* this crash existed in the first place, not a
+random edge case. `main` doesn't ship the buggy custom directive at
+all -- it defers entirely to Neovim core's own injection handling --
+so switching to it removes the patch instead of maintaining one.
+`lua/plugins/nvim-treesitter.lua` now pins `branch = "main"`, drops
+`configs.setup()` for `require("nvim-treesitter").install({...})` plus
+a `FileType` autocmd that calls `vim.treesitter.start()` and sets
+`indentexpr` per buffer (how highlighting/indent are enabled on this
+branch -- they're no longer part of the plugin's own config surface).
+`main` doesn't support lazy-loading, so this plugin now loads at
+startup (`lazy = false`) instead of on `VeryLazy`; measured startup
+time afterward was still ~49ms, no meaningful regression.
+
+Verified via PTY, with zero monkeypatching of any kind: the late-open
+crash repro no longer crashes, `vaf`/`]m`/parameter-swap textobjects
+still work on a real `.c` file, and all 23 parsers reinstalled cleanly
+into the new `main`-managed location (`~/.local/share/nvim/site/parser`)
+with no stale duplicates left in the old master-era location inside
+the plugin's own directory.
 
 ## 22. Fixed: `<leader>or` silently did nothing outside a real project
 
@@ -447,16 +465,73 @@ fix). When zero templates match the current directory,
 `overseer/commands.lua`'s `run_template` calls its own internal
 `log.error(...)`, which writes to overseer's log file only -- never
 `vim.notify`, never any UI -- so there's truly nothing to see. That's
-what `OverseerRunCmd` (a separate command, prompts via `vim.ui.input`
+what `OverseerShell` (a separate command, prompts via `vim.ui.input`
 for a raw shell command) exists for, but nothing wired it up or fell
 back to it.
 
-Fix: `<leader>or`'s keymap (`lua/settings/keybinds.lua`) now calls
+**First fix (worked, superseded):** had `<leader>or` call
 `require("overseer.template").list(...)` itself first to check whether
-anything actually matched. If nothing did, it notifies you and prompts
-for a command exactly like `OverseerRunCmd` does; if something did
-match, it defers to `require("overseer").run_template({})` as before.
-Verified via PTY on a throwaway `.md` file with no project files
-nearby: `<leader>or` now notifies "no task templates detected here --
-type a command", prompts, and running `echo hello-from-overseer`
-through it actually completes with a visible `SUCCESS` line.
+anything matched, falling back to the ad-hoc prompt when nothing did.
+Worked (verified via PTY: notifies, prompts, `echo
+hello-from-overseer` ran and showed `SUCCESS`), but it reached into
+`overseer.template`/`overseer.task` -- modules overseer doesn't
+document as public API -- to rebuild logic the plugin already exposes
+through a command. Not worth the coupling for what it bought.
+
+**Real fix:** two plain keymaps instead of one smart one. `<leader>or`
+stays `:OverseerRun` (detected templates only, now documented
+accurately above instead of overclaiming a fallback); `<leader>oa` is
+new, mapped straight to overseer's own ad-hoc-command entry point for
+the ad-hoc case. Same end result for you, zero internals, zero custom
+logic to maintain.
+
+While wiring this up the first time, the keymap pointed at a command
+called `OverseerRunCmd`, which doesn't exist -- it silently failed
+with `E492: Not an editor command` the moment it was actually pressed
+rather than just assumed to work. Checked overseer's own command list
+(`overseer/init.lua`) and the real name is `OverseerShell`. Caught
+only because this got exercised end-to-end via PTY instead of trusting
+"the module loaded" as good enough.
+
+## 23. Reorganized: `keybinds.lua` had become a dumping ground
+
+Not a bug, a hygiene fix. `lua/settings/keybinds.lua` had grown to
+~560 lines covering ~20 unrelated plugins, including real control
+flow (not just key -> action mappings) for things like the overseer
+fallback above. A file named "keybinds" that's actually "every
+plugin's keymaps plus some business logic" is a bad place to look for
+anything once it's that size.
+
+Every plugin-specific keymap now lives in that plugin's own
+`lua/plugins/<name>.lua`, under lazy.nvim's own `keys` field --
+the idiomatic place for this, not a side effect of this cleanup.
+`keybinds.lua` is down to ~95 lines: vanilla-Vim window/terminal
+navigation and genuinely cross-cutting quality-of-life maps (clipboard
+copies, clear search highlight) -- things no single plugin owns.
+
+This mattered for more than tidiness: several keymaps called
+`require("plugin")` directly inside a closure specifically so the
+*first keypress* would trigger that plugin's lazy load (e.g. Telescope
+pickers, DAP). Moving a closure like that into the plugin's own
+`config` function (which only runs *after* the plugin has already
+loaded via some other trigger) would have silently broken that --
+the key wouldn't exist yet to press. `keys` avoids this: lazy.nvim
+registers the real keymap immediately at startup regardless of
+whether the plugin itself has loaded, so pressing it is still what
+triggers the load. Verified via PTY across every migrated plugin
+(telescope, dap, harpoon, flash, overseer, bufferline, nvim-tree,
+trouble, persistence, grug-far, cmake-tools, render-markdown,
+markdown-preview, bookmarks) that each one still loads on its
+keymap's first press, not before.
+
+Found two more real, pre-existing bugs while moving things around:
+- `keybinds.lua` had bound both LSP's "outgoing calls" and (just
+  added, in the same editing pass) overseer's ad-hoc command to the
+  identical `<leader>oc` -- the LSP mapping would have been silently
+  shadowed. Caught before it shipped; overseer's ad-hoc command moved
+  to `<leader>oa` instead.
+- `<Leader>l` (lsp_lines toggle) was bound via a bare
+  `require("lsp_lines").toggle` reference, which evaluates the
+  `require()` immediately when the spec file loads (at startup),
+  defeating its own `event = "VeryLazy"` trigger. Wrapped in a closure
+  like the rest of this config already does elsewhere.
