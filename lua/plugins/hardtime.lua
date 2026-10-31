@@ -2,10 +2,7 @@
 -- HARDTIME (REAL-TIME BAD-HABIT NUDGES)
 -- Blocks/warns on repeated hjkl, arrow keys, repeated dd/x instead
 -- of a count, etc., and suggests the better alternative inline.
--- `:Hardtime report` shows which hints fired most. Complements the
--- custom :KeymapStats command (see lua/modules/keymap-tracker.lua)
--- which tracks the *positive* side -- which of this config's own
--- keybinds you actually use.
+-- `:Hardtime report` shows which hints fired most.
 -- ============================================================
 return {
     "m4xshen/hardtime.nvim",
