@@ -72,6 +72,17 @@ vim.o.titlestring = "%{fnamemodify(getcwd(), ':t')}"
 -- Always show the sign column (diagnostics, git, etc.)
 vim.opt.signcolumn = "yes"
 
+-- Always show the tabline (bufferline). Set here, not left to
+-- bufferline's own setup() -- dashboard-nvim saves whatever
+-- `showtabline` is at VimEnter and restores it when the dashboard
+-- buffer closes (see its init.lua). dashboard-nvim's event is
+-- VimEnter, which fires before bufferline's VeryLazy setup gets a
+-- chance to run, so it was saving the *pre-bufferline* default (1)
+-- and restoring that over bufferline's 2 the moment you opened a
+-- file from the dashboard -- tabline vanished. Setting it explicitly
+-- this early means dashboard always captures the right value.
+vim.o.showtabline = 2
+
 -- Enable mouse support in all modes
 vim.o.mouse = "a"
 
