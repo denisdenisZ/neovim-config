@@ -383,15 +383,42 @@ upstream incompatibility on nvim-treesitter's `master` tip (verified
 we're already at tip, not stale -- `master`'s last update predates this
 Neovim release).
 
-Fix: `after/queries/markdown/injections.scm` overrides the plugin's
-query with Neovim core's own (bug-free) version of the same file --
-core captures `@injection.language` directly with no custom directive,
-and core's injection logic resolves that capture's text as the
-language name natively. Verified via PTY: the crash is gone, and the
-```sh block in this file's section 1 still gets a real injected `bash`
-parser (checked `vim.treesitter.get_parser(0):children()`), same for a
-```c block elsewhere in this doc. The only loss versus the plugin's
-version is info-string aliasing (e.g. a fence tagged `py` instead of
-`python`) and case-insensitivity -- not a regression for this config,
-since every fence tag actually used in these docs (`c`, `sh`) is
-already an exact, lowercase parser name.
+**First fix attempt (wrong, superseded):** an
+`after/queries/markdown/injections.scm` overriding the plugin's query
+file with Neovim core's own version. This looked like it worked --
+opening this file as `nvim NVIM_FEATURES.md` (a cmd-line argument)
+never crashed -- but you found the real failure by opening the same
+file through nvim-tree instead, which still crashed. That difference is
+the actual bug in the fix: `vim.treesitter.query.get_files()`
+(`$VIMRUNTIME/lua/vim/treesitter/query.lua`) resolves which query file
+"wins" by taking the *first* non-"; extends" file found in
+`&runtimepath` order and discarding every later non-extends file --
+it does not take the last one, which was my wrong assumption.
+nvim-treesitter's own file sits earlier in `&runtimepath` than anything
+under `~/.config/nvim/after`, so the override was never actually used.
+It only looked like it worked because opening a file as a cmd-line
+argument parses it before nvim-treesitter (lazy-loaded on `VeryLazy`)
+has added itself to `&runtimepath` -- at that moment only the safe
+files are visible, Neovim resolves and caches that safe query for the
+rest of the session, and nvim-treesitter showing up in `&runtimepath`
+moments later doesn't invalidate the cache. Opening the same file later
+through nvim-tree (or `:edit`, or any other post-startup path) happens
+well after `VeryLazy`, so the query resolves with nvim-treesitter's
+buggy file included and crashes.
+
+**Real fix:** `lua/plugins/nvim-treesitter.lua`'s `config` function now
+explicitly `require`s `nvim-treesitter.query_predicates` (forcing its
+buggy directives to register) and immediately re-registers
+`#set-lang-from-info-string!` and `#set-lang-from-mimetype!` with
+corrected handlers via `vim.treesitter.query.add_directive(name,
+handler, { force = true })`. The corrected handlers are the plugin's
+original logic with one change: they unwrap `match[capture_id]` to its
+first element when it's a table, instead of assuming it's always
+already a single `TSNode`. This fixes the actual broken Lua functions
+rather than fighting over which query *file* gets used, so it's
+correct regardless of `&runtimepath` order or lazy-load timing.
+Verified via PTY by deliberately reproducing the late-open path (open
+nvim with no file argument, wait past `VeryLazy`, then `:edit` this
+file) and confirming `&runtimepath` resolution really does pick
+nvim-treesitter's own file in that scenario, yet there's no crash and
+the `sh`/`c` fences still get real injected `bash`/`c` parsers.
