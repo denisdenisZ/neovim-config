@@ -1,1 +1,4 @@
 lazy-lock.json
+
+# local-only notes/exercises/practices -- not meant to be versioned
+*.md
