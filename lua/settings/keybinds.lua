@@ -445,7 +445,49 @@ end, { desc = "Neotest: Stop nearest" })
 -- ============================================================
 -- OVERSEER (GENERIC TASK RUNNER: non-CMake build/test/run tasks)
 -- ============================================================
-vim.keymap.set("n", "<leader>or", "<cmd>OverseerRun<CR>", { desc = "Overseer: Run task" })
+-- Plain `:OverseerRun` only auto-detects project templates (Makefile,
+-- Cargo.toml, package.json, etc.) -- when none match, it calls its own
+-- internal `log.error` (writes to overseer's log file only, never
+-- `vim.notify`) and shows nothing at all: no picker, no message,
+-- nothing. Confirmed via PTY: opening a file in a directory with no
+-- recognized build system and running `:OverseerRun` produces zero
+-- visible output and zero `:messages` entries. Pre-checking the
+-- template count ourselves lets this fall back to `OverseerRunCmd`'s
+-- ad-hoc "type any shell command" prompt instead of silently doing
+-- nothing -- which is what this was already documented (wrongly) as
+-- doing in NVIM_FEATURES.md.
+vim.keymap.set("n", "<leader>or", function()
+    local function search_params()
+        local dir = vim.fn.getcwd()
+        if vim.bo.buftype == "" then
+            local bufname = vim.api.nvim_buf_get_name(0)
+            if bufname ~= "" then
+                dir = vim.fn.fnamemodify(bufname, ":p:h")
+            end
+        end
+        return { dir = dir, filetype = vim.bo.filetype }
+    end
+
+    local function run_adhoc_command()
+        vim.ui.input({ prompt = "Command: ", completion = "shellcmdline" }, function(cmd)
+            if cmd and cmd ~= "" then
+                require("overseer.task").new({ cmd = cmd }):start()
+            end
+        end)
+    end
+
+    require("overseer.template").list(search_params(), function(templates)
+        templates = vim.tbl_filter(function(tmpl)
+            return not tmpl.hide
+        end, templates)
+        if #templates == 0 then
+            vim.notify("Overseer: no task templates detected here -- type a command", vim.log.levels.INFO)
+            run_adhoc_command()
+        else
+            require("overseer").run_template({})
+        end
+    end)
+end, { desc = "Overseer: Run task (falls back to ad-hoc command)" })
 vim.keymap.set("n", "<leader>ot", "<cmd>OverseerToggle<CR>", { desc = "Overseer: Toggle task list" })
 vim.keymap.set(
     "n",

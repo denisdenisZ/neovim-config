@@ -75,7 +75,14 @@ actively maintained and gives real completions in `CMakeLists.txt` files.
 For anything that isn't CMake: Go builds/tests, Python scripts, Bash
 scripts, Makefiles.
 
-- `<leader>or` run a task (prompts for a template/command)
+- `<leader>or` run a task: picks from auto-detected project templates
+  (Makefile, Cargo.toml, package.json, ...) if any match the current
+  directory, otherwise prompts for an ad-hoc shell command instead.
+  **Fixed** (see section 22) -- plain `:OverseerRun` does the template
+  part but silently does nothing when zero templates match, no
+  fallback, no message; this keymap checks the template count itself
+  first and falls back to `vim.ui.input` for a raw command when there
+  aren't any.
 - `<leader>ot` toggle the task list
 - `<leader>oq` quick actions on the task under cursor (rerun, open output...)
 
@@ -422,3 +429,34 @@ nvim with no file argument, wait past `VeryLazy`, then `:edit` this
 file) and confirming `&runtimepath` resolution really does pick
 nvim-treesitter's own file in that scenario, yet there's no crash and
 the `sh`/`c` fences still get real injected `bash`/`c` parsers.
+
+## 22. Fixed: `<leader>or` silently did nothing outside a real project
+
+You hit this too: pressing `<leader>or` in a plain file (no Makefile/
+Cargo.toml/package.json anywhere nearby) produced literally no visible
+reaction -- no picker, no prompt, no error, nothing in `:messages`
+either. Confirmed via PTY, both through the keymap and by typing
+`:OverseerRun` directly: identical silent nothing.
+
+Root cause: `:OverseerRun` only auto-detects templates from overseer's
+bundled project-type modules (`make.lua`, `cargo.lua`, `npm.lua`,
+etc.) -- there is no generic "always available, type any command"
+template bundled by default, despite that being exactly what this
+config's own docs claimed `<leader>or` did (section 4, before this
+fix). When zero templates match the current directory,
+`overseer/commands.lua`'s `run_template` calls its own internal
+`log.error(...)`, which writes to overseer's log file only -- never
+`vim.notify`, never any UI -- so there's truly nothing to see. That's
+what `OverseerRunCmd` (a separate command, prompts via `vim.ui.input`
+for a raw shell command) exists for, but nothing wired it up or fell
+back to it.
+
+Fix: `<leader>or`'s keymap (`lua/settings/keybinds.lua`) now calls
+`require("overseer.template").list(...)` itself first to check whether
+anything actually matched. If nothing did, it notifies you and prompts
+for a command exactly like `OverseerRunCmd` does; if something did
+match, it defers to `require("overseer").run_template({})` as before.
+Verified via PTY on a throwaway `.md` file with no project files
+nearby: `<leader>or` now notifies "no task templates detected here --
+type a command", prompts, and running `echo hello-from-overseer`
+through it actually completes with a visible `SUCCESS` line.
