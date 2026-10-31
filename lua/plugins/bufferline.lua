@@ -9,7 +9,13 @@ return {
     dependencies = "nvim-tree/nvim-web-devicons",
     event = "VeryLazy",
 
-    opts = {},
+    opts = {
+        options = {
+            -- Without this, <C-S-n>/<C-S-p> (BufferLineMoveNext/Prev)
+            -- stop at the first/last tab instead of wrapping around.
+            move_wraps_at_ends = true,
+        },
+    },
     keys = {
         { "<C-n>", "<Cmd>BufferLineCycleNext<CR>", desc = "BufferLine: Next buffer" },
         { "<C-p>", "<Cmd>BufferLineCyclePrev<CR>", desc = "BufferLine: Previous buffer" },
