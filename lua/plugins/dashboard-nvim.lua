@@ -6,6 +6,27 @@ return {
             -- config
         })
 
+        -- The dashboard buffer's buftype is "" (not "nofile"), so
+        -- plugins that normally skip non-file buffers don't exclude
+        -- it. Two culprits found by checking the actual rendered
+        -- SGR colors against every highlight group definition (none
+        -- of dashboard-nvim's own highlight groups had a background
+        -- set -- the real source turned out to be elsewhere):
+        -- - snacks.indent drew indent guides across the padding
+        --   whitespace used to center the dashboard's text.
+        -- - mini.trailspace painted a solid background block over
+        --   that same trailing whitespace, since every dashboard
+        --   line is entirely trailing (space-padded) content.
+        -- Both have their own documented per-buffer opt-out var.
+        vim.api.nvim_create_autocmd("FileType", {
+            pattern = "dashboard",
+            group = vim.api.nvim_create_augroup("dashboard-no-text-decorations", { clear = true }),
+            callback = function()
+                vim.b.snacks_indent = false
+                vim.b.minitrailspace_disable = true
+            end,
+        })
+
         -- Closing the last real buffer doesn't leave you with nothing --
         -- Vim always auto-creates a fresh unnamed empty buffer to show
         -- in its place. Detect that exact state (the *only* listed
