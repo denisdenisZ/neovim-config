@@ -1,7 +1,6 @@
 return {
     "mason-org/mason-lspconfig.nvim",
     event = "VeryLazy",
-    opts = {},
     dependencies = {
         { "mason-org/mason.nvim", opts = {} },
         "neovim/nvim-lspconfig",
@@ -20,7 +19,11 @@ return {
                 "lua_ls",
                 "efm",
             },
-            automatic_installation = true,
+            -- `automatic_installation` was removed upstream (checked
+            -- the current source: it's not referenced anywhere, not
+            -- even as a deprecated alias) -- replaced by
+            -- `automatic_enable`, which defaults to true and already
+            -- covers this. Had been silently doing nothing.
         })
 
         require("mason-tool-installer").setup({

@@ -535,3 +535,64 @@ Found two more real, pre-existing bugs while moving things around:
   `require()` immediately when the spec file loads (at startup),
   defeating its own `event = "VeryLazy"` trigger. Wrapped in a closure
   like the rest of this config already does elsewhere.
+
+## 24. Plugin-health audit: is anything else in the treesitter situation?
+
+After the treesitter branch migration (§21), checked whether any other
+plugin had the same problem: pinned to a branch/version that's gone
+stale, unmaintained, or drifted from the idiomatic current setup
+instructions. Pulled every plugin + pinned commit from
+`lazy-lock.json` (61 entries), and for each one compared our pinned
+branch against upstream's actual default branch and how far behind
+its tip we are.
+
+Result: every plugin's pinned branch already matches its real
+upstream default branch, except harpoon (see below, which is correct
+on inspection). Most show 0 commits behind with matching commit dates
+-- consistent with a setup that gets `:Lazy sync`'d regularly, not
+neglected.
+
+Two numerically large gaps turned out to be non-issues once checked
+against the actual commit log instead of just the number:
+- **blink.cmp** (257 behind `main`): upstream `main` is mid-development
+  on a breaking V2 rewrite that needs a separate system package
+  (`blink.lib`) -- upstream's own README now says to stay on
+  `version = "1.*"` for stability. Our config already does exactly
+  that (`lua/plugins/blink-cmp.lua`), and is sitting on the latest v1
+  tag (`v1.10.2`) -- the 257 was comparing against the wrong branch
+  entirely.
+- **toggleterm.nvim** (3 behind `main`): just unreleased commits since
+  the last tag; config already pins `version = "*"` (latest tag), same
+  idiom as blink.cmp. Normal, not a concern.
+
+harpoon's pinned branch, `harpoon2`, differs from `master` -- but
+`master`'s own README says it's deprecated and all development moved
+to `harpoon2` (last `master` commit: 2024-08-29, frozen; `harpoon2` has
+commits through 2026). We're on the actively-developed branch; if
+anything `master` would have been the treesitter-style mistake.
+
+One real (if minor) finding, fixed: `lua/plugins/mason-lspconfig.lua`
+passed `automatic_installation = true` to `mason-lspconfig.setup()`.
+Checked mason-lspconfig's current source (`init.lua`, `settings.lua`,
+`features/automatic_enable.lua`) -- that option doesn't exist anymore
+(zero references anywhere in its lua/doc/README); it's been replaced
+by `automatic_enable`, which defaults to `true` and already does the
+equivalent job (calls `vim.lsp.enable()` for every mason-installed
+server). It was a silent no-op, not a bug -- removed it, along with a
+stray dead `opts = {}` field in the same file (the `config` function
+already overrides `opts`, so it had no effect). Verified via PTY on a
+real `.go` file that gopls still attaches with our custom settings
+(`gofumpt`, `semanticTokens`, `staticcheck`) intact after the removal
+-- no ordering race between `automatic_enable` and our explicit
+`vim.lsp.config()` calls in `lsp-config.lua`.
+
+One open item, flagged but not resolved (a preference call, not a
+bug): `indent-blankline.nvim` and `snacks.nvim`'s built-in `indent`
+module are both enabled simultaneously and provide the identical
+indent-guide feature. Confirmed ibl is actually rendering (8 literal
+`│` box-drawing characters found via raw terminal-byte scan on a
+nested Python file) despite showing 0 queryable extmarks -- ibl v3
+draws via Neovim's decoration-provider API per-redraw rather than
+leaving persistent extmarks, so the extmark check alone would have
+wrongly suggested it was inert. Not broken, just redundant with
+snacks.indent; worth deciding which one to keep.
