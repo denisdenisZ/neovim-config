@@ -1,52 +1,83 @@
+-- ============================================================
+-- NVIM-TREESITTER (main branch, not master)
+-- ============================================================
+-- This config used to pin the old "master" branch (configs.setup(),
+-- ensure_installed, highlight/indent tables). Switched to "main" --
+-- the actively maintained rewrite -- because master's own docs say
+-- it's locked for Nvim 0.11 compatibility only, and we're on 0.12.4.
+-- Staying on master meant patching around its query_predicates.lua
+-- directly (a real, documented incompatibility with current Neovim's
+-- query API: directive handlers always receive an array of nodes per
+-- capture now, which master's shim doesn't expect, crashing any
+-- markdown fenced-code-block parse). "main" doesn't ship that custom
+-- directive at all -- it defers entirely to Neovim core's own
+-- injection handling -- so migrating removes the patch rather than
+-- maintaining it. Confirmed via PTY: parsers install, highlighting/
+-- indentation/injections all work, and the markdown crash is gone
+-- without any override needed.
+--
+-- "main" has a different shape than master:
+-- - no configs.setup() -- parsers are installed via
+--   require("nvim-treesitter").install(...), highlighting/indent are
+--   enabled per-filetype via autocmds (Neovim core features now, not
+--   plugin config: see :h treesitter-highlight).
+-- - doesn't support lazy-loading (its own README says so explicitly),
+--   so this loads at startup instead of on "VeryLazy" like before.
 local M = {
     "nvim-treesitter/nvim-treesitter",
-    event = "VeryLazy",
+    branch = "main",
+    lazy = false,
+    build = ":TSUpdate",
     dependencies = { "nvim-treesitter/nvim-treesitter-textobjects" },
-    build = function()
-        require("nvim-treesitter.install").update({ with_sync = true })()
-    end,
     config = function()
-        local configs = require("nvim-treesitter.configs")
+        require("nvim-treesitter").install({
+            "c",
+            "cpp",
+            "lua",
+            "vim",
+            "vimdoc",
+            "query",
+            "javascript",
+            "html",
+            "css",
+            "go",
+            "python",
+            "bash",
+            "markdown",
+            "markdown_inline",
+            "make",
+            "cmake",
+            -- "latex" deliberately excluded: tree-sitter-latex's build
+            -- script passes a --no-bindings flag that the tree-sitter
+            -- CLI installed on this machine (0.26.9) no longer
+            -- accepts, so the grammar fails to compile every time
+            -- (confirmed via real install attempt). vimtex doesn't
+            -- depend on this parser for its own syntax/compile/
+            -- SyncTex features, so nothing is lost by skipping it.
+            "git_config",
+            "git_rebase",
+            "gitcommit",
+            "gitignore",
+            "json",
+            "yaml",
+            "toml",
+        })
 
-        configs.setup({
-            ensure_installed = {
-                "c",
-                "cpp",
-                "lua",
-                "vim",
-                "vimdoc",
-                "query",
-                "javascript",
-                "html",
-                "css",
-                "go",
-                "python",
-                "bash",
-                "markdown",
-                "markdown_inline",
-                "make",
-                "cmake",
-                -- "latex" deliberately excluded: tree-sitter-latex's build
-                -- script passes a --no-bindings flag that the tree-sitter
-                -- CLI installed on this machine (0.26.9) no longer
-                -- accepts, so the grammar fails to compile every time
-                -- (confirmed via real install attempt). vimtex doesn't
-                -- depend on this parser for its own syntax/compile/
-                -- SyncTex features, so nothing is lost by skipping it.
-                "git_config",
-                "git_rebase",
-                "gitcommit",
-                "gitignore",
-                "json",
-                "yaml",
-                "toml",
-            },
-            sync_install = false,
-            highlight = { enable = true },
-            indent = {
-                enable = true,
-                disable = { "c", "cpp" },
-            },
+        -- Treesitter indentation is still experimental upstream; it
+        -- was disabled for c/cpp under the old master-branch config
+        -- too (its indent output there was worse than the default),
+        -- so that exclusion carries over here.
+        local indent_disabled = { c = true, cpp = true }
+
+        vim.api.nvim_create_autocmd("FileType", {
+            callback = function(args)
+                pcall(vim.treesitter.start)
+                if not indent_disabled[vim.bo[args.buf].filetype] then
+                    pcall(function()
+                        vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                    end)
+                end
+            end,
         })
 
         -- ----- nvim-treesitter-textobjects -----
@@ -54,8 +85,9 @@ local M = {
         -- requires explicit vim.keymap.set() calls -- the old declarative
         -- `textobjects = { keymaps = {...} }` block nested inside
         -- nvim-treesitter.configs.setup() (still used by some older
-        -- guides) is silently ignored by this version. Confirmed via a
-        -- real PTY test: "vaf" did nothing until rewritten this way.
+        -- guides, and only existed on master anyway) is silently
+        -- ignored by this version. Confirmed via a real PTY test: "vaf"
+        -- did nothing until rewritten this way.
         require("nvim-treesitter-textobjects").setup({
             select = {
                 lookahead = true,
@@ -119,94 +151,6 @@ local M = {
         vim.keymap.set("n", "<leader>nb", function()
             swap.swap_previous("@parameter.inner")
         end, { desc = "Textobjects: Swap parameter with previous" })
-
-        -- ----- fix: nvim-treesitter's #set-lang-from-info-string!/
-        -- #set-lang-from-mimetype! directives crash on this Neovim
-        -- version -----
-        -- nvim-treesitter.query_predicates (loaded as a side effect of
-        -- requiring the plugin above) registers these two directives
-        -- assuming `match[capture_id]` is a single TSNode and calls
-        -- `node:range()` on it directly. Current Neovim always passes
-        -- directive handlers an *array* of nodes per capture now -- the
-        -- `all = false` compat option the plugin's shim relied on to
-        -- request a single node was removed from
-        -- vim.treesitter.query.add_directive's Opts (confirmed against
-        -- $VIMRUNTIME/lua/vim/treesitter/query.lua, which now only
-        -- documents `force`). That crashes any markdown fenced-code-block
-        -- parse -- confirmed via real PTY test opening a .md file through
-        -- nvim-tree (not a cmd-line arg -- see below for why that
-        -- distinction matters).
-        --
-        -- An `after/queries/markdown/injections.scm` override was tried
-        -- first and looked like it worked in isolated testing, but it's
-        -- actually a dead end: Neovim's query-file combination algorithm
-        -- (vim.treesitter.query.get_files) uses the *first* non-";
-        -- extends" file found in 'runtimepath' order as the base and
-        -- silently discards every later non-extends file, including
-        -- ours -- it does NOT take the last one. nvim-treesitter's own
-        -- file is earlier in rtp than anything under
-        -- ~/.config/nvim/after, so our override file was never actually
-        -- used. The reason it *looked* like it worked when opened as a
-        -- `nvim file.md` cmd-line arg: that parses the buffer before
-        -- nvim-treesitter (lazy-loaded on "VeryLazy") has added itself to
-        -- 'runtimepath', so at that moment only the safe files are
-        -- visible and Neovim caches that safe query for the rest of the
-        -- session. Opening the same file later through nvim-tree happens
-        -- well after VeryLazy has fired, so the query resolves with
-        -- nvim-treesitter's file included and crashes. Fixing this
-        -- requires actually overriding the buggy Lua functions, not the
-        -- query files that reference them -- which is what this does.
-        require "nvim-treesitter.query_predicates"
-        local tsquery = require "vim.treesitter.query"
-
-        local function first_node(node)
-            if type(node) == "table" then
-                return node[1]
-            end
-            return node
-        end
-
-        local html_script_type_languages = {
-            ["importmap"] = "json",
-            ["module"] = "javascript",
-            ["application/ecmascript"] = "javascript",
-            ["text/ecmascript"] = "javascript",
-        }
-        local non_filetype_match_injection_language_aliases = {
-            ex = "elixir",
-            pl = "perl",
-            sh = "bash",
-            uxn = "uxntal",
-            ts = "typescript",
-        }
-        local function get_parser_from_markdown_info_string(injection_alias)
-            local filetype_match = vim.filetype.match({ filename = "a." .. injection_alias })
-            return filetype_match or non_filetype_match_injection_language_aliases[injection_alias] or injection_alias
-        end
-
-        tsquery.add_directive("set-lang-from-mimetype!", function(match, _, bufnr, pred, metadata)
-            local node = first_node(match[pred[2]])
-            if not node then
-                return
-            end
-            local type_attr_value = vim.treesitter.get_node_text(node, bufnr)
-            local configured = html_script_type_languages[type_attr_value]
-            if configured then
-                metadata["injection.language"] = configured
-            else
-                local parts = vim.split(type_attr_value, "/", {})
-                metadata["injection.language"] = parts[#parts]
-            end
-        end, { force = true })
-
-        tsquery.add_directive("set-lang-from-info-string!", function(match, _, bufnr, pred, metadata)
-            local node = first_node(match[pred[2]])
-            if not node then
-                return
-            end
-            local injection_alias = vim.treesitter.get_node_text(node, bufnr):lower()
-            metadata["injection.language"] = get_parser_from_markdown_info_string(injection_alias)
-        end, { force = true })
     end,
 }
 
