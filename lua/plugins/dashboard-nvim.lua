@@ -17,13 +17,24 @@ return {
         -- - mini.trailspace painted a solid background block over
         --   that same trailing whitespace, since every dashboard
         --   line is entirely trailing (space-padded) content.
-        -- Both have their own documented per-buffer opt-out var.
+        -- Both have their own documented per-buffer opt-out var, but
+        -- that alone isn't enough: when dashboard-nvim returns to an
+        -- already-empty buffer (see the BufDelete autocmd below) it
+        -- reuses that buffer in place rather than switching to a new
+        -- one, so WinEnter/BufEnter never fire. mini.trailspace only
+        -- re-checks its disable flag on WinEnter/BufEnter/InsertLeave
+        -- (see its source), so the match it already added back when
+        -- this was a normal empty buffer (trailspace is enabled by
+        -- default) just sits there -- setting the disable var only
+        -- stops *future* highlighting, it doesn't clear what's
+        -- already drawn. Call unhighlight() directly to clear it now.
         vim.api.nvim_create_autocmd("FileType", {
             pattern = "dashboard",
             group = vim.api.nvim_create_augroup("dashboard-no-text-decorations", { clear = true }),
             callback = function()
                 vim.b.snacks_indent = false
                 vim.b.minitrailspace_disable = true
+                pcall(function() require("mini.trailspace").unhighlight() end)
             end,
         })
 
