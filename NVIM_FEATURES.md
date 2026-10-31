@@ -358,3 +358,40 @@ docs-reading-only pass would have missed entirely.
 
 See `PRACTICES.md` for suggestions beyond the editor itself -- the
 build/test loop, sanitizers, git hooks, and so on.
+
+## 21. Fixed: markdown rendering crash on fenced code blocks
+
+You hit this live: opening a markdown file with a fenced code block (the
+`sh` block in section 1 of this very file) crashed with `attempt to call
+method 'range' (a nil value)` inside `vim.treesitter.get_node_text`,
+triggered from render-markdown.nvim's parse step.
+
+Root cause, confirmed by reading the actual source on disk (not
+guessed): nvim-treesitter's `master` branch (which this config uses --
+it's the old `configs.setup()`-style API, not the newer `main` rewrite)
+ships its own `queries/markdown/injections.scm`, which resolves a fenced
+block's language via a custom `#set-lang-from-info-string!` directive
+in `lua/nvim-treesitter/query_predicates.lua`. That directive assumes
+`match[capture_id]` is a single `TSNode` and calls `node:range()`
+directly on it. Current Neovim (0.12.4) always passes directive
+handlers an *array* of nodes per capture now -- the `all = false`
+compatibility option nvim-treesitter's shim relied on to request a
+single node was removed from `vim.treesitter.query.add_directive`'s
+`Opts` (confirmed against `$VIMRUNTIME/lua/vim/treesitter/query.lua`,
+which now only documents `force`). This is a genuine, currently-open
+upstream incompatibility on nvim-treesitter's `master` tip (verified
+we're already at tip, not stale -- `master`'s last update predates this
+Neovim release).
+
+Fix: `after/queries/markdown/injections.scm` overrides the plugin's
+query with Neovim core's own (bug-free) version of the same file --
+core captures `@injection.language` directly with no custom directive,
+and core's injection logic resolves that capture's text as the
+language name natively. Verified via PTY: the crash is gone, and the
+```sh block in this file's section 1 still gets a real injected `bash`
+parser (checked `vim.treesitter.get_parser(0):children()`), same for a
+```c block elsewhere in this doc. The only loss versus the plugin's
+version is info-string aliasing (e.g. a fence tagged `py` instead of
+`python`) and case-insensitivity -- not a regression for this config,
+since every fence tag actually used in these docs (`c`, `sh`) is
+already an exact, lowercase parser name.
