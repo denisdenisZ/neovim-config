@@ -11,6 +11,52 @@ local function get_visual_selection()
     return sel:gsub("\n", " "):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+-- Open the current selection in the window telescope was launched from,
+-- WITHOUT closing the picker -- so you can keep browsing results and
+-- open several candidates to look at while the list stays up. Normal
+-- <CR> always closes the picker (that's `action_set.edit`'s job); this
+-- deliberately skips that.
+--
+-- Telescope auto-closes the picker if the prompt buffer loses focus
+-- (a `BufLeave`-once autocmd in the "PickerInsert" group, meant to
+-- catch you accidentally tabbing away) -- we have to clear that one
+-- autocmd for this single programmatic hop, since we're leaving on
+-- purpose and coming straight back. It gets reinstalled the moment you
+-- type in the prompt again, so nothing is left permanently disabled.
+local function open_in_background(prompt_bufnr)
+    local action_state = require("telescope.actions.state")
+    local entry = action_state.get_selected_entry()
+    if not entry then
+        return
+    end
+
+    local filename = entry.path or entry.filename
+    if not filename then
+        return
+    end
+    local row = entry.row or entry.lnum
+    local col = entry.col
+
+    local picker = action_state.get_current_picker(prompt_bufnr)
+    local prompt_win = vim.api.nvim_get_current_win()
+
+    pcall(vim.api.nvim_clear_autocmds, {
+        buffer = prompt_bufnr,
+        group = "PickerInsert",
+        event = "BufLeave",
+    })
+
+    vim.api.nvim_set_current_win(picker.original_win_id)
+    vim.cmd("edit " .. vim.fn.fnameescape(filename))
+    if row then
+        pcall(vim.api.nvim_win_set_cursor, 0, { row, math.max((col or 1) - 1, 0) })
+    end
+
+    if vim.api.nvim_win_is_valid(prompt_win) then
+        vim.api.nvim_set_current_win(prompt_win)
+    end
+end
+
 return {
     "nvim-telescope/telescope.nvim",
     cmd = "Telescope",
@@ -136,6 +182,17 @@ return {
             end,
             desc = "Telescope: Live grep with args",
         },
+        -- Reopens the last picker exactly as you left it -- same
+        -- query text, same result list, same cursor position in the
+        -- list. Built into telescope itself, no caching logic needed
+        -- here.
+        {
+            "<leader>fR",
+            function()
+                require("telescope.builtin").resume()
+            end,
+            desc = "Telescope: Resume last picker",
+        },
     },
 
     -- ============================================================
@@ -152,6 +209,15 @@ return {
         local telescope = require("telescope")
 
         telescope.setup({
+            defaults = {
+                -- <C-CR> already means "accept, don't close" in blink-cmp
+                -- (blink-cmp.lua) -- same chord, same meaning, here:
+                -- open the selection but keep the picker open.
+                mappings = {
+                    i = { ["<C-CR>"] = open_in_background },
+                    n = { ["<C-CR>"] = open_in_background },
+                },
+            },
             extensions = {
                 frecency = {
                     show_scores = false,
