@@ -73,9 +73,15 @@ return {
             end,
             desc = "Telescope: Fuzzy find in current buffer",
         },
-        -- Grep word under cursor across the project (starts in normal mode)
+        -- Grep word under cursor across the project (starts in normal mode).
+        -- <C-f>, not <S-f>: flash.nvim's char plugin unconditionally
+        -- takes over f/F/t/T/;/, in n/x/o mode when it loads (no check for
+        -- a pre-existing mapping, unlike its own handling of ;/,), so plain
+        -- <S-f> here was always going to lose that fight regardless of
+        -- plugin load order. <C-f> is the "global" one; <leader>fw is the
+        -- current-buffer-only counterpart right below.
         {
-            "<S-f>",
+            "<C-f>",
             function()
                 local word = vim.fn.expand("<cword>")
                 require("telescope.builtin").live_grep({
@@ -83,11 +89,11 @@ return {
                     initial_mode = "normal",
                 })
             end,
-            desc = "Telescope: Live grep word under cursor",
+            desc = "Telescope: Live grep word under cursor (project)",
         },
         -- Fuzzy find word under cursor in the current buffer (starts in normal mode)
         {
-            "<C-f>",
+            "<leader>fw",
             function()
                 local word = vim.fn.expand("<cword>")
                 require("telescope.builtin").current_buffer_fuzzy_find({
@@ -97,8 +103,12 @@ return {
             end,
             desc = "Telescope: Search word under cursor in current buffer",
         },
+        -- Same collision as above: flash maps F in Visual mode too ("x"
+        -- mode, which Visual-mode lookups also consult), so this moved
+        -- off <S-f> to match. Kept on <C-f> (the "global" key) to match
+        -- the normal-mode entry above.
         {
-            "<S-f>",
+            "<C-f>",
             function()
                 local text = get_visual_selection()
                 require("telescope.builtin").live_grep({
